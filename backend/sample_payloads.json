@@ -1,0 +1,92 @@
+{
+  "test_cases": {
+    "valid_stock_deduction": {
+      "description": "Valid inventory deduction for standard order checkout",
+      "payload": {
+        "sku": "PROD-1001-BLK",
+        "quantity": 5,
+        "operation": "deduct",
+        "reason": "Order #ORD-78194 fulfillment",
+        "reference_id": "ORD-78194"
+      },
+      "expected_status": 200
+    },
+    "valid_restock": {
+      "description": "Valid inbound inventory restocking shipment",
+      "payload": {
+        "sku": "PROD-3040-USC",
+        "quantity": 50,
+        "operation": "restock",
+        "reason": "Supplier shipment inbound #SHP-2026-04",
+        "reference_id": "SHP-2026-04"
+      },
+      "expected_status": 200
+    },
+    "edge_case_negative_quantity": {
+      "description": "Payload with negative stock count - must be rejected by Pydantic validator",
+      "payload": {
+        "sku": "PROD-1001-BLK",
+        "quantity": -15,
+        "operation": "deduct",
+        "reason": "Malformed client deduction attempting negative input"
+      },
+      "expected_status": 422,
+      "expected_error_code": "PAYLOAD_VALIDATION_ERROR"
+    },
+    "edge_case_zero_quantity": {
+      "description": "Payload with zero quantity - must be rejected by Pydantic validator",
+      "payload": {
+        "sku": "PROD-1001-BLK",
+        "quantity": 0,
+        "operation": "deduct",
+        "reason": "No-op deduction attempt"
+      },
+      "expected_status": 422,
+      "expected_error_code": "PAYLOAD_VALIDATION_ERROR"
+    },
+    "edge_case_malformed_sku_lowercase": {
+      "description": "Malformed SKU with lowercase letters and missing standard pattern",
+      "payload": {
+        "sku": "prod-1001-blk",
+        "quantity": 2,
+        "operation": "deduct",
+        "reason": "Invalid client SKU casing"
+      },
+      "expected_status": 422,
+      "expected_error_code": "PAYLOAD_VALIDATION_ERROR"
+    },
+    "edge_case_malformed_sku_special_chars": {
+      "description": "Malformed SKU with illegal symbols and punctuation",
+      "payload": {
+        "sku": "PROD$$1001##INVALID!",
+        "quantity": 1,
+        "operation": "deduct",
+        "reason": "Corrupt barcode scan payload"
+      },
+      "expected_status": 422,
+      "expected_error_code": "PAYLOAD_VALIDATION_ERROR"
+    },
+    "edge_case_insufficient_stock": {
+      "description": "Requested deduction exceeds available stock (stock limit breach)",
+      "payload": {
+        "sku": "PROD-5500-LMT",
+        "quantity": 999,
+        "operation": "deduct",
+        "reason": "Bulk order exceeding limited edition inventory"
+      },
+      "expected_status": 422,
+      "expected_error_code": "INSUFFICIENT_STOCK"
+    },
+    "edge_case_nonexistent_sku": {
+      "description": "Well-formatted SKU that does not exist in inventory catalog",
+      "payload": {
+        "sku": "PROD-0000-NONE",
+        "quantity": 1,
+        "operation": "deduct",
+        "reason": "Order item for unlisted SKU"
+      },
+      "expected_status": 404,
+      "expected_error_code": "ITEM_NOT_FOUND"
+    }
+  }
+}

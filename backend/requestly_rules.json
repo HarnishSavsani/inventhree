@@ -1,0 +1,87 @@
+{
+  "version": "1.0.0",
+  "name": "Inventory Microservice - Network & Upstream Fault Simulation Rules",
+  "description": "Exported Requestly rules configuration for simulating latency, 429 rate limiting, and 500 upstream server failures on FastAPI inventory endpoints.",
+  "rules": [
+    {
+      "id": "req_rule_rate_limit_429",
+      "name": "Simulate API Rate Limiting (HTTP 429)",
+      "description": "Intercepts POST requests to /api/v1/inventory/update and responds with HTTP 429 Too Many Requests to test frontend throttling resilience.",
+      "ruleType": "response",
+      "status": "Active",
+      "isSample": false,
+      "source": {
+        "key": "Url",
+        "operator": "Contains",
+        "value": "/api/v1/inventory/update"
+      },
+      "pairs": [
+        {
+          "statusCode": 429,
+          "statusText": "Too Many Requests",
+          "responseHeaders": [
+            {
+              "header": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "header": "Retry-After",
+              "value": "60"
+            },
+            {
+              "header": "X-RateLimit-Limit",
+              "value": "100"
+            },
+            {
+              "header": "X-RateLimit-Remaining",
+              "value": "0"
+            }
+          ],
+          "responseType": "static",
+          "response": "{\n  \"success\": false,\n  \"error_code\": \"RATE_LIMIT_EXCEEDED\",\n  \"message\": \"Too Many Requests: Inventory update rate limit exceeded. Please backoff and retry.\",\n  \"details\": {\n    \"retry_after_seconds\": 60,\n    \"limit\": 100,\n    \"window\": \"60s\"\n  },\n  \"timestamp\": \"2026-10-23T15:50:00Z\"\n}"
+        }
+      ]
+    },
+    {
+      "id": "req_rule_upstream_500",
+      "name": "Simulate Upstream ERP Server Failure (HTTP 500)",
+      "description": "Intercepts inventory update calls to simulate an internal upstream warehouse synchronization crash.",
+      "ruleType": "response",
+      "status": "Inactive",
+      "isSample": false,
+      "source": {
+        "key": "Url",
+        "operator": "Contains",
+        "value": "/api/v1/inventory/update"
+      },
+      "pairs": [
+        {
+          "statusCode": 500,
+          "statusText": "Internal Server Error",
+          "responseHeaders": [
+            {
+              "header": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "responseType": "static",
+          "response": "{\n  \"success\": false,\n  \"error_code\": \"UPSTREAM_ERP_UNAVAILABLE\",\n  \"message\": \"Upstream ERP warehouse gateway failure while syncing stock update.\",\n  \"details\": \"Connection reset by peer at central inventory host:5432\",\n  \"timestamp\": \"2026-10-23T15:50:00Z\"\n}"
+        }
+      ]
+    },
+    {
+      "id": "req_rule_network_latency_delay",
+      "name": "Simulate 2500ms Network Latency Delay",
+      "description": "Injects artificial 2.5 second network delay to test frontend loading spinners and timeout handling.",
+      "ruleType": "delay",
+      "status": "Active",
+      "isSample": false,
+      "source": {
+        "key": "Url",
+        "operator": "Contains",
+        "value": "/api/v1/inventory"
+      },
+      "delay": 2500
+    }
+  ]
+}
